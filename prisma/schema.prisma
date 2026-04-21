@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Building {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  floors Floor[]
+}
+
+model Floor {
+  id          String   @id @default(uuid())
+  buildingId  String
+  number      Int      // 0=bodrum, 1, 2, 3, 4
+  label       String   // "Bodrum", "1. Kat", etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  units    Unit[]
+
+  @@index([buildingId])
+}
+
+model Unit {
+  id          String   @id @default(uuid())
+  floorId     String
+  number      String   // "101", "2+1-A" etc.
+  type        UnitType
+  areaSqm     Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  floor     Floor       @relation(fields: [floorId], references: [id], onDelete: Cascade)
+  workItems WorkItem[]
+  costs     CostRecord[]
+
+  @@unique([floorId, number])
+  @@index([floorId])
+}
+
+enum UnitType {
+  THREE_PLUS_ONE  // 3+1
+  TWO_PLUS_ONE    // 2+1
+}
+
+model WorkItem {
+  id          String     @id @default(uuid())
+  unitId      String?
+  floorId     String?    // For floor-level items (not tied to a specific unit)
+  category    String     // "Kaba İşler", "Tesisat", "Boyama", etc.
+  name        String
+  status      WorkStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  progress    Int        @default(0) // 0-100
+  dueDate    DateTime?
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  unit Unit?     @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  floor Floor?   @relation(fields: [floorId], references: [id], onDelete: SetNull)
+  costs CostRecord[]
+
+  @@index([unitId])
+  @@index([floorId])
+  @@index([status])
+}
+
+enum WorkStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  BLOCKED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model CostRecord {
+  id          String   @id @default(uuid())
+  workItemId  String?
+  description String
+  amount      Float    // TL cinsinden
+  receiptUrl  String?  // Fiş/foto linki
+  recordedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workItem WorkItem? @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+
+  @@index([workItemId])
+}
+
+// Seed data model
+model SeedData {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+}
