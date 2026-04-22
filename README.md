@@ -3,6 +3,7 @@
 İnşaat projelerinin iş takibi ve maliyet yönetimi için modern web uygulaması.
 
 ## Özellikler
+ 
 
 - 📊 **Kat Bazlı Takip** - Bodrum, 1-4. katlar için ayrı görünüm
 - 🏠 **20 Daire** - 8 adet 3+1, 12 adet 2+1
