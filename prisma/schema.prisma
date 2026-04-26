@@ -1,17 +1,15 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./data/prod.db"
 }
 
 model Building {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   name      String
   address   String?
   createdAt DateTime @default(now())
@@ -21,49 +19,45 @@ model Building {
 }
 
 model Floor {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   buildingId  String
   number      Int      // 0=bodrum, 1, 2, 3, 4
   label       String   // "Bodrum", "1. Kat", etc.
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  building Building  @relation(fields: [buildingId], references: [id], onDelete: Cascade)
   units    Unit[]
+  workItems WorkItem[]
 
   @@index([buildingId])
 }
 
 model Unit {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   floorId     String
   number      String   // "101", "2+1-A" etc.
-  type        UnitType
+  type        String   // "THREE_PLUS_ONE" or "TWO_PLUS_ONE"
   areaSqm     Float?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   floor     Floor       @relation(fields: [floorId], references: [id], onDelete: Cascade)
   workItems WorkItem[]
-  costs     CostRecord[]
+  costRecords CostRecord[]
 
   @@unique([floorId, number])
   @@index([floorId])
 }
 
-enum UnitType {
-  THREE_PLUS_ONE  // 3+1
-  TWO_PLUS_ONE    // 2+1
-}
-
 model WorkItem {
-  id          String     @id @default(uuid())
+  id          String   @id @default(cuid())
   unitId      String?
-  floorId     String?    // For floor-level items (not tied to a specific unit)
+  floorId     String?
   category    String     // "Kaba İşler", "Tesisat", "Boyama", etc.
   name        String
-  status      WorkStatus @default(TODO)
-  priority    Priority   @default(MEDIUM)
+  status      String     @default("TODO") // "TODO", "IN_PROGRESS", "DONE", "BLOCKED"
+  priority    String     @default("MEDIUM") // "LOW", "MEDIUM", "HIGH", "URGENT"
   progress    Int        @default(0) // 0-100
   dueDate    DateTime?
   completedAt DateTime?
@@ -80,23 +74,10 @@ model WorkItem {
   @@index([status])
 }
 
-enum WorkStatus {
-  TODO
-  IN_PROGRESS
-  DONE
-  BLOCKED
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  URGENT
-}
-
 model CostRecord {
-  id          String   @id @default(uuid())
+  id          String   @id @default(cuid())
   workItemId  String?
+  unitId      String?
   description String
   amount      Float    // TL cinsinden
   receiptUrl  String?  // Fiş/foto linki
@@ -105,13 +86,15 @@ model CostRecord {
   updatedAt   DateTime @updatedAt
 
   workItem WorkItem? @relation(fields: [workItemId], references: [id], onDelete: SetNull)
+  unit Unit?        @relation(fields: [unitId], references: [id], onDelete: SetNull)
 
   @@index([workItemId])
+  @@index([unitId])
 }
 
 // Seed data model
 model SeedData {
-  id    String @id @default(uuid())
+  id    String @id @default(cuid())
   key   String @unique
   value String
 }
